@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="关于程序与设计、黑客与画家 | 黄玄，Web & Mobile Lover，Software Engineer，UX Designer | 这里是 @Hux黄玄 的个人博客，与你一起发现更大的世界。">
+    <meta name="keywords"  content="博客, 个人网站, 互联网, Web, JavaScript, 前端, 设计">
+    <meta name="theme-color" content="#000000">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Golang 是否有必要内存对齐？ - 想个好名字的博客 | Mr Xie Blog">
+    
+    <meta property="og:type" content="article">
+    <meta property="og:description" content="有些同学可能不知道，struct 中的字段顺序不同，内存占用也有可能会相差很大。比如：
+
+">
+    
+    <meta property="article:published_time" content="2019-08-01T00:00:00Z">
+    
+    
+    <meta property="article:author" content="ms2008">
+    
+    
+    <meta property="article:tag" content="Golang">
+    
+    <meta property="article:tag" content="Atomicity">
+    
+    
+    <meta property="og:image" content="http://localhost:4000/img/avatar-hui.png">
+    <meta property="og:url" content="http://localhost:4000/2019/08/01/golang-memory-alignment/">
+    <meta property="og:site_name" content="想个好名字的博客 | Mr Xie Blog">
+    
+    <title>Golang 是否有必要内存对齐？ - 想个好名字的博客 | Mr Xie Blog</title>
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.ico">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="http://localhost:4000/2019/08/01/golang-memory-alignment/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/hux-blog.min.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+
+    <!-- Navigation -->
+
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Mr Xie Blog</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+                    
+                    
+                    
+                    
+                    <li>
+                        <a href="/about/">About</a>
+                    </li>
+                    
+                    
+                    
+                    <li>
+                        <a href="/archive/">Archive</a>
+                    </li>
+                    
+                    
+                    
+                    
+                    
+                    <li>
+                        <a href="/portfolio/">Portfolio</a>
+                    </li>
+                    
+                    
+                    
+                    
+                    
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    var __HuxNav__ = {
+        close: function(){
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        },
+        open: function(){
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+
+    // Bind Event
+    $toggle.addEventListener('click', function(e){
+        if ($navbar.className.indexOf('in') > 0) {
+            __HuxNav__.close()
+        }else{
+            __HuxNav__.open()
+        }
+    })
+
+    /**
+     * Since Fastclick is used to delegate 'touchstart' globally
+     * to hack 300ms delay in iOS by performing a fake 'click',
+     * Using 'e.stopPropagation' to stop 'touchstart' event from 
+     * $toggle/$collapse will break global delegation.
+     * 
+     * Instead, we use a 'e.target' filter to prevent handler
+     * added to document close HuxNav.  
+     *
+     * Also, we use 'click' instead of 'touchstart' as compromise
+     */
+    document.addEventListener('click', function(e){
+        if(e.target == $toggle) return;
+        if(e.target.className == 'icon-bar') return;
+        __HuxNav__.close();
+    })
+</script>
+
+
+    <!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/post-bg-golang-blog-hero.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+        position: relative;
+        background-image: url('/img/post-bg-golang-blog-hero.jpg')
+    }
+
+    
+</style>
+<header class="intro-header" >
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#Golang" title="Golang">Golang</a>
+                        
+                        <a class="tag" href="/tags/#Atomicity" title="Atomicity">Atomicity</a>
+                        
+                    </div>
+                    <h1>Golang 是否有必要内存对齐？</h1>
+                    
+                    
+                    <h2 class="subheading">内存模型</h2>
+                    
+                    <span class="meta">Posted by ms2008 on August 1, 2019</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+    <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+                <!-- Multi-Lingual -->
+                
+
+				<p>有些同学可能不知道，struct 中的字段顺序不同，内存占用也有可能会相差很大。比如：</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">T1</span> <span class="k">struct</span> <span class="p">{</span>
+	<span class="n">a</span> <span class="kt">int8</span>
+	<span class="n">b</span> <span class="kt">int64</span>
+	<span class="n">c</span> <span class="kt">int16</span>
+<span class="p">}</span>
+
+<span class="k">type</span> <span class="n">T2</span> <span class="k">struct</span> <span class="p">{</span>
+	<span class="n">a</span> <span class="kt">int8</span>
+	<span class="n">c</span> <span class="kt">int16</span>
+	<span class="n">b</span> <span class="kt">int64</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>在 64 bit 平台上，T1 占用 24 bytes，T2 占用 16 bytes 大小；而在 32 bit 平台上，T1 占用 16 bytes，T2 占用 12 bytes 大小。<strong>可见不同的字段顺序，最终决定 struct 的内存大小，所以有时候合理的字段顺序可以减少内存的开销</strong>。</p>
+
+<p>这是为什么呢？<u>因为有内存对齐的存在，编译器使用了内存对齐，那么最后的大小结果就会不一样</u>。至于为什么要做对齐，主要考虑下面两个原因：</p>
+
+<ul>
+  <li>
+    <p>平台（移植性）</p>
+
+    <p>不是所有的硬件平台都能够访问任意地址上的任意数据。例如：特定的硬件平台只允许在特定地址获取特定类型的数据，否则会导致异常情况</p>
+  </li>
+  <li>
+    <p>性能</p>
+
+    <p>若访问未对齐的内存，将会导致 CPU 进行两次内存访问，并且要花费额外的时钟周期来处理对齐及运算。而本身就对齐的内存仅需要一次访问就可以完成读取动作，这显然高效很多，是标准的空间换时间做法</p>
+  </li>
+</ul>
+
+<blockquote>
+  <p>有的小伙伴可能会认为内存读取，就是一个简单的字节数组摆放。但实际上 CPU 并不会以一个一个字节去读取和写入内存，相反 CPU 读取内存是一块一块读取的，块的大小可以为 2、4、6、8、16 字节等大小，块大小我们称其为内存访问粒度。假设访问粒度为 4，那么 CPU 就会以每 4 个字节大小的访问粒度去读取和写入内存。</p>
+</blockquote>
+
+<p>在不同平台上的编译器都有自己默认的 “对齐系数”。一般来讲，我们常用的 x86 平台的系数为 4；x86_64 平台系数为 8。需要注意的是，除了这个默认的对齐系数外，还有不同数据类型的对齐系数。数据类型的对齐系数在不同平台上可能会不一致。例如，在 x86_64 平台上，int64 的对齐系数为 8，而在 x86 平台上其对齐系数就是 4。</p>
+
+<p>还是拿上面的 T1、T2 来说，在 x86_64 平台上，T1 的内存布局为：</p>
+
+<p><img src="/img/in-post/memory-alignment/T1.png" alt="" /></p>
+
+<p>T2 的内存布局为（int16 的对齐系数为 2）：</p>
+
+<p><img src="/img/in-post/memory-alignment/T2.png" alt="" /></p>
+
+<p>仔细看，T1 存在许多 padding，显然它占据了不少空间。那么也就不难理解，为什么调整结构体内成员变量的字段顺序就能达到缩小结构体占用大小的疑问了，是因为巧妙地减少了 padding 的存在。让它们更 “紧凑” 了。</p>
+
+<p>其实内存对齐除了可以降低内存占用之外，还有一种情况是必须要手动对齐的：<strong>在 x86 平台上原子操作 64bit 指针。之所以要强制对齐，是因为在 32bit 平台下进行 64bit 原子操作要求必须 8 字节对齐，否则程序会 panic</strong>。详情可以参考 <a href="https://godoc.org/sync/atomic#pkg-note-bug">atomic</a> 官方文档（这么重要的信息竟然放在页面的最底部！！！😱）：</p>
+
+<blockquote>
+  <p><strong>Bugs</strong></p>
+
+  <p>On x86-32, the 64-bit functions use instructions unavailable before the Pentium MMX. On non-Linux ARM, the 64-bit functions use instructions unavailable before the ARMv6k core. On ARM, x86-32, and 32-bit MIPS, it is the caller’s responsibility to arrange for 64-bit alignment of 64-bit words accessed atomically. The first word in a variable or in an allocated struct, array, or slice can be relied upon to be 64-bit aligned.</p>
+</blockquote>
+
+<p>比如，下面这段代码：</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">package</span> <span class="n">main</span>
+
+<span class="k">import</span> <span class="p">(</span>
+	<span class="s">"sync/atomic"</span>
+<span class="p">)</span>
+
+<span class="k">type</span> <span class="n">T3</span> <span class="k">struct</span> <span class="p">{</span>
+	<span class="n">b</span> <span class="kt">int64</span>
+	<span class="n">c</span> <span class="kt">int32</span>
+	<span class="n">d</span> <span class="kt">int64</span>
+<span class="p">}</span>
+
+<span class="k">func</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">a</span> <span class="o">:=</span> <span class="n">T3</span><span class="p">{}</span>
+	<span class="n">atomic</span><span class="o">.</span><span class="n">AddInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="n">a</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="m">1</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>编译为 64bit 可执行文件，运行没有任何问题；但是当编译为 32bit 可执行文件，运行就会 panic:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ GOARCH</span><span class="o">=</span>386 go build aligned.go
+<span class="err">$</span>
+<span class="nv">$ </span>./aligned
+panic: runtime error: invalid memory address or nil pointer dereference
+<span class="o">[</span>signal SIGSEGV: segmentation violation <span class="nv">code</span><span class="o">=</span>0x1 <span class="nv">addr</span><span class="o">=</span>0x0 <span class="nv">pc</span><span class="o">=</span>0x8049f2c]
+
+goroutine 1 <span class="o">[</span>running]:
+runtime/internal/atomic.Xadd64<span class="o">(</span>0x941218c, 0x1, 0x0, 0x809a4c0, 0x944e070<span class="o">)</span>
+	/usr/local/go/src/runtime/internal/atomic/asm_386.s:105 +0xc
+main.main<span class="o">()</span>
+	/root/gofourge/src/lab/archive/aligned.go:18 +0x42
+</code></pre></div></div>
+
+<p>原因就是 T3 在 32bit 平台上是 4 字节对齐，而在 64bit 平台上是 8 字节对齐。在 64bit 平台上其内存布局为：</p>
+
+<p><img src="/img/in-post/memory-alignment/T3-x86_64.png" alt="" /></p>
+
+<p>可以看到编译器为了让 d 8 字节对齐，在 c 后面 padding 了 4 个字节。而在 32bit 平台上其内存布局为：</p>
+
+<p><img src="/img/in-post/memory-alignment/T3-x86.png" alt="" /></p>
+
+<p>编译器用的是 4 字节对齐，所以 c 后面 4 个字节并没有 padding，而是直接排列 d 的高低位字节。</p>
+
+<p>为了解决这种情况，我们必须手动 padding T3，让其 “看起来” 像是 8 字节对齐的：</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">T3</span> <span class="k">struct</span> <span class="p">{</span>
+	<span class="n">b</span> <span class="kt">int64</span>
+	<span class="n">c</span> <span class="kt">int32</span>
+	<span class="n">_</span> <span class="kt">int32</span>
+	<span class="n">d</span> <span class="kt">int64</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>这样 T3 的内存布局就变成了：</p>
+
+<p><img src="/img/in-post/memory-alignment/T3-x86-8.png" alt="" /></p>
+
+<p>看起来就像 8 字节对齐了一样，这样就能完美兼容 32bit 平台了。其实很多知名的项目，都是这么处理的，比如 <a href="https://github.com/golang/groupcache/blob/869f871628b6baa9cfbc11732cdf6546b17c1298/groupcache.go#L169-L172">groupcache</a>：</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">Group</span> <span class="k">struct</span> <span class="p">{</span>
+	<span class="n">_</span> <span class="kt">int32</span> <span class="c">// force Stats to be 8-byte aligned on 32-bit platforms</span>
+
+	<span class="c">// Stats are statistics on the group.</span>
+	<span class="n">Stats</span> <span class="n">Stats</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>说了这么多，但是在我们实际编码的时候，多数情况都不会考虑到最优的内存对齐。那有没有什么办法能自动检测当前的内存布局是最优呢？答案是：有的。</p>
+
+<p><a href="http://golang-sizeof.tips/">golang-sizeof.tips</a> 这个网站就可以可视化 struct 的内存布局，但是只支持 8 字节对齐，是个缺点。还有一种方法，就是用 golangci-lint 做静态检测，比如在我的一个项目中检测结果是这样的：</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>golangci-lint run <span class="nt">--disable-all</span> <span class="nt">-E</span> maligned
+config/config.go:79:11: struct of size 48 bytes could be of size 40 bytes <span class="o">(</span>maligned<span class="o">)</span>
+<span class="nb">type </span>SASL struct <span class="o">{</span>
+          ^
+</code></pre></div></div>
+
+<p>提示有一处 struct 可以优化，来看一下这个 struct 的定义：</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">SASL</span> <span class="k">struct</span> <span class="p">{</span>
+	<span class="n">Enable</span>    <span class="kt">bool</span>
+	<span class="n">Username</span>  <span class="kt">string</span>
+	<span class="n">Password</span>  <span class="kt">string</span>
+	<span class="n">Handshake</span> <span class="kt">bool</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>通过 <a href="http://golang-sizeof.tips/">golang-sizeof.tips</a> 对比，显然字段按照下面这样排序更为合理：</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">SASL</span> <span class="k">struct</span> <span class="p">{</span>
+	<span class="n">Username</span>  <span class="kt">string</span>
+	<span class="n">Password</span>  <span class="kt">string</span>
+	<span class="n">Handshake</span> <span class="kt">bool</span>
+	<span class="n">Enable</span>    <span class="kt">bool</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="参考文献">参考文献</h3>
+
+<ul>
+  <li><a href="https://blog.chewxy.com/2016/07/25/on-the-memory-alignment-of-go-slice-values/">On the memory alignment of Go slice values</a></li>
+  <li><a href="https://go101.org/article/memory-layout.html">Memory Layouts</a></li>
+  <li><a href="https://github.com/golang/go/issues/11891">cmd/vet: detect non-64-bit-aligned arguments to sync/atomic funcs</a></li>
+  <li><a href="https://dave.cheney.net/2015/10/09/padding-is-hard">Padding is hard</a></li>
+  <li><a href="https://eddycjy.gitbook.io/golang/di-1-ke-za-tan/go-memory-align">在 Go 中恰到好处的内存对齐</a></li>
+  <li><a href="https://www.flysnow.org/2017/07/02/go-in-action-unsafe-memory-layout.html">Go unsafe 包之内存布局</a></li>
+</ul>
+
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    
+                </ul>
+
+
+                
+                <!-- disqus 评论框 start -->
+                <div class="comment">
+                    <div id="disqus_thread" class="disqus-thread"></div>
+                </div>
+                <!-- disqus 评论框 end -->
+                
+
+                
+            </div>
+
+    <!-- Side Catalog Container -->
+        
+            <div class="
+                col-lg-2 col-lg-offset-0
+                visible-lg-block
+                sidebar-container
+                catalog-container">
+                <div class="side-catalog">
+                    <hr class="hidden-sm hidden-xs">
+                    <h5>
+                        <a class="catalog-toggle" href="#">CATALOG</a>
+                    </h5>
+                    <ul class="catalog-body"></ul>
+                </div>
+            </div>
+        
+
+    <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+        				
+                            
+        				
+                            
+        				
+        			</div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- disqus 公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    /* * * CONFIGURATION VARIABLES * * */
+    var disqus_shortname = "hux";
+    var disqus_identifier = "/2019/08/01/golang-memory-alignment";
+    var disqus_url = "http://localhost:4000/2019/08/01/golang-memory-alignment/";
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<!-- disqus 公共JS代码 end -->
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js",function(){
+        anchors.options = {
+          visible: 'always',
+          placement: 'right',
+          icon: '#'
+        };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+<!-- Add support for Mathjax by Voleking -->
+
+
+
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <!-- SNS Link -->
+                
+
+
+<ul class="list-inline text-center">
+
+
+  
+  
+  <li>
+    <a href="https://twitter.com/adairxie">
+      <span class="fa-stack fa-lg">
+        <i class="fa fa-circle fa-stack-2x"></i>
+        <i class="fa fa-twitter fa-stack-1x fa-inverse"></i>
+      </span>
+    </a>
+  </li>
+  
+  
+  <li>
+    <a target="_blank" href="https://www.zhihu.com/people/adairxie">
+      <span class="fa-stack fa-lg">
+        <i class="fa fa-circle fa-stack-2x"></i>
+        <i class="fa  fa-stack-1x fa-inverse">知</i>
+      </span>
+    </a>
+  </li>
+  
+  
+  <li>
+    <a target="_blank" href="http://weibo.com/adairxie">
+      <span class="fa-stack fa-lg">
+        <i class="fa fa-circle fa-stack-2x"></i>
+        <i class="fa fa-weibo fa-stack-1x fa-inverse"></i>
+      </span>
+    </a>
+  </li>
+  
+  
+  
+  <li>
+    <a target="_blank" href="https://github.com/adairxie">
+      <span class="fa-stack fa-lg">
+        <i class="fa fa-circle fa-stack-2x"></i>
+        <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+      </span>
+    </a>
+  </li>
+  
+  
+</ul>
+
+                <p class="copyright text-muted">
+                    Copyright &copy; Mr Xie Blog 2019
+                    <br>
+                    Powered by <a href="http://huangxuan.me">Hux Blog</a> |
+                    <iframe
+                        style="margin-left: 2px; margin-bottom:-5px;"
+                        frameborder="0" scrolling="0" width="100px" height="20px"
+                        src="https://ghbtns.com/github-btn.html?user=huxpro&repo=huxpro.github.io&type=star&count=true" >
+                    </iframe>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/js/jquery.min.js "></script>
+
+<!-- Bootstrap Core JavaScript -->
+<!-- Currently, only navbar scroll-down effect at desktop still depends on this -->
+<script src="/js/bootstrap.min.js "></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/js/hux-blog.min.js "></script>
+
+<!-- Service Worker -->
+
+<script src="/js/snackbar.js "></script>
+<script src="/js/sw-registration.js "></script>
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!--
+     Because of the native support for backtick-style fenced code blocks
+     right within the Markdown is landed in Github Pages,
+     From V1.6, There is no need for Highlight.js,
+     so Huxblog drops it officially.
+
+     - https://github.com/blog/2100-github-pages-now-faster-and-simpler-with-jekyll-3-0
+     - https://help.github.com/articles/creating-and-highlighting-code-blocks/
+     - https://github.com/jneen/rouge/wiki/list-of-supported-languages-and-lexers
+-->
+<!--
+    <script>
+        async("http://cdn.bootcss.com/highlight.js/8.6/highlight.min.js", function(){
+            hljs.initHighlightingOnLoad();
+        })
+    </script>
+    <link href="http://cdn.bootcss.com/highlight.js/8.6/styles/github.min.css" rel="stylesheet">
+-->
+
+
+
+
+
+<!--fastClick.js -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+<script>
+    // dynamic User by Hux
+    var _gaId = 'UA-49627206-1';
+    var _gaDomain = 'adairxie.github.io';
+
+    // Originial
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', _gaId, _gaDomain);
+    ga('send', 'pageview');
+</script>
+
+
+
+<!-- Baidu Tongji -->
+
+
+
+<!-- Side Catalog -->
+
+<script type="text/javascript">
+    function generateCatalog (selector) {
+
+        // interop with multilangual 
+        if ('' == 'true') {
+            _containerSelector = 'div.post-container.active'
+        } else {
+            _containerSelector = 'div.post-container'
+        }
+
+        // init
+        var P = $(_containerSelector),a,n,t,l,i,c;
+        a = P.find('h1,h2,h3,h4,h5,h6');
+
+        // clean
+        $(selector).html('')
+
+        // appending
+        a.each(function () {
+            n = $(this).prop('tagName').toLowerCase();
+            i = "#"+$(this).prop('id');
+            t = $(this).text();
+            c = $('<a href="'+i+'" rel="nofollow">'+t+'</a>');
+            l = $('<li class="'+n+'_nav"></li>').append(c);
+            $(selector).append(l);
+        });
+        return true;
+    }
+
+    generateCatalog(".catalog-body");
+
+    // toggle side catalog
+    $(".catalog-toggle").click((function(e){
+        e.preventDefault();
+        $('.side-catalog').toggleClass("fold")
+    }))
+
+    /*
+     * Doc: https://github.com/davist11/jQuery-One-Page-Nav
+     * Fork by Hux to support padding
+     */
+    async("/js/jquery.nav.js", function () {
+        $('.catalog-body').onePageNav({
+            currentClass: "active",
+            changeHash: !1,
+            easing: "swing",
+            filter: "",
+            scrollSpeed: 700,
+            scrollOffset: 0,
+            scrollThreshold: .2,
+            begin: null,
+            end: null,
+            scrollChange: null,
+            padding: 80
+        });
+    });
+</script>
+
+
+
+<!-- Multi-Lingual -->
+
+
+
+
+<!-- Image to hack wechat -->
+<img src="/img/icon_wechat.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>
