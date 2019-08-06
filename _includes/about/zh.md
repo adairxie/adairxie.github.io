@@ -1,31 +1,25 @@
-> 写写代码，做做设计，  
-> 离开世界之前，一切都是过程。
+> 对基于 Kong 的开发有较多实践经验。
+>
+> 十余年的 Lua 咸鱼，抄起 OpenResty 就是干。
 
-Hey，我是黄玄，病毒种，进化程度不明，多出没于[博客](https://huangxuan.me)、[微博](weibo.com/huxpro)、[知乎](https://www.zhihu.com/people/huxpro/pins/posts)、[Twitter](https://twitter.com/Huxpro/)、[Github](http://github.com/huxpro)、[Medium](https://medium.com/@Huxpro) 等地带，绝招尚在开发中。
+Hey，我是 ms2008，程序员，多出没于[博客](https://ms2008.github.io)、[Twitter](https://twitter.com/ms2008vip/)、[Github](http://github.com/ms2008) 等地带，绝招尚在开发中。
 
-职业是软件工程师，[Web 工会](https://medium.com/ben-and-dion/team-web-3315aa447fb2#.359a9c6cl)活跃成员。目前在 [Facebook](https://www.facebook.com/) 写 [Reason](https://reasonml.github.io/) 与 [Messenger.com](http://messenger.com/) ，曾被招募为淘宝网 · [阿里旅行](http://alitrip.com)前端工程师、微影时代 · [微票儿](http://www.wepiao.com/?r=movie)前端基础工程团队负责人、[饿了么](https://ele.me/) · 大前端团队 · [PWA 顾问](https://medium.com/elemefe/upgrading-ele-me-to-progressive-web-app-2a446832e509)。
+有着成为一只大牛的心，但无奈个人能力有限，只能跟在大牛身后捡捡贝壳什么的。既然成不了大牛，为何还要开一个博客呢？这不是自取其辱吗？
 
-一些作品和开源软件项目，👉 戳 [Portfolio](/portfolio)、[Github](http://github.com/huxpro)、[演说.io](https://zhuanlan.zhihu.com/p/21280918)。 
+据说想去谷歌工作的话，有技术博客的话可以加分哦~（虽然我想多了-_-）
+
+但无论怎样，我不想就这么碌碌无为的过下去，我非常想也非常愿意将我在追寻大牛足迹的过程中的所见所闻所得与大家分享，也希望能和大家多交流，共同进步！
+
+一些作品和开源软件项目，👉 戳 [Portfolio](/portfolio)、[Github](http://github.com/ms2008)。
 
 
-##### Talks
+##### 微信公众号
 
-- [Upgrading to Progressive Web Apps][9] · [JSConf CN 上海 2017](http://2017.jsconf.cn/)
-- Building Progressive Web Apps · [CSDI 广州 2017](http://www.csdisummit.com/)
-- The State of Progressive Web App · GDG IO Redux 北京 2017
-- 炒冷饭 · PWA 到底是个什么玩意？· Baidu HQ 北京 2017
-- [Service Worker 101][5] · GDG DevFest 北京 2016
-- [Progressive Web App，复兴序章][4] · [QCon 上海 2016](http://2016.qconshanghai.com/presentation/3111)
-- Progressive Web App 之我见 · GDG IO Redux 北京 2016
-- [CSS Still Sucks 2015][2] · 2015
-- [JavaScript 模块化七日谈][1] · 2015
-
-[1]: //huangxuan.me/2015/07/09/js-module-7day/
-[2]: //huangxuan.me/2015/12/28/css-sucks-2015/
-[3]: //huangxuan.me/2016/06/05/pwa-in-my-pov/
-[4]: //huangxuan.me/2016/10/20/pwa-qcon2016/
-[5]: //huangxuan.me/2016/11/20/sw-101-gdgdf/
-[6]: https://yanshuo.io/assets/player/?deck=58ac8598b123db0067292f92 "PWA Rehashing"
-[7]: https://yanshuo.io/assets/player/?deck=593ad6fbfe88c2006a0a0d6d "The State of PWA"
-[8]: https://yanshuo.io/assets/player/?deck=594d673d570c357d0698a950 "Building PWA"
-[9]: //huangxuan.me/jsconfcn2017/
+<div class="visible-md visible-lg">
+    <img src="/img/wechat-344.jpg" width="344" />
+    <small class="img-hint">Scanning on mobile</small>
+</div>
+<div class="visible-xs visible-sm">
+    <img src="/img/wechat-258.jpg" width="258" />
+    <small class="img-hint">Scanning on mobile</small>
+</div>

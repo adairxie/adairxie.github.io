@@ -1,24 +1,24 @@
 # Site settings
-title: Mr Xie Blog
-SEOTitle: 想个好名字的博客 | Mr Xie Blog
+title: Poslua Blog
+SEOTitle: poslua | ms2008 Blog
 header-img: img/home-bg.jpg
-email: runhxie@gmail.com
-description: "关于程序与设计、黑客与画家 | 黄玄，Web & Mobile Lover，Software Engineer，UX Designer | 这里是 @Hux黄玄 的个人博客，与你一起发现更大的世界。"
-keyword: "博客, 个人网站, 互联网, Web, JavaScript, 前端, 设计"
-url: "https://adairxie.github.io"              # your host, for absolute URL
+email: ms2008vip@gmail.com
+description: "关于 Lua, OpenResty | poslua, linux, 性能, 安全, 计算机技术 | 这里是 @ms2008 的个人博客，与你一起发现更大的世界。"
+keyword: "poslua, Lua, LuaJIT, OpenResty, ms2008, Python, Golang, Linux, Web, 互联网"
+url: "https://ms2008.github.io"              # your host, for absolute URL
 baseurl: ""                             # for example, '/blog' if your blog hosted on 'host/blog'
 
-# Publish posts or collection documents with a future date.
-future: true
+
 
 # SNS settings
 RSS: false
-weibo_username:     adairxie
-zhihu_username:     adairxie
-github_username:    adairxie
-twitter_username:   adairxie
-#facebook_username:  adairxie
-#linkedin_username:  firstname-lastname-idxxxx
+#weibo_username:    ms2008
+zhihu_username:     ms2008
+github_username:    ms2008
+twitter_username:   ms2008vip
+mail_address:       ms2008vip@gmail.com
+#facebook_username: ms2008
+#linkedin_username: firstname-lastname-idxxxx
 
 
 
@@ -34,8 +34,6 @@ anchorjs: true                          # if you want to customize anchor. check
 
 # Gems
 # from PR#40, to support local preview for Jekyll 3.0
-# make sure you have this gem installed
-# `$ gem install jekyll-paginate`
 plugins: [jekyll-paginate]
 
 
@@ -51,27 +49,27 @@ kramdown:
 
 
 # Disqus settings
-disqus_username: hux
+disqus_username: poslua
 
-# Netease settings
+# Netease setttings
 netease_comment: false
 
 
 
 # Analytics settings
-# Baidu Analytics 
+# Baidu Analytics
 # ba_track_id: [your track id]
 
 # Google Analytics
-ga_track_id: 'UA-49627206-1'            # Format: UA-xxxxxx-xx
-ga_domain: adairxie.github.io
+ga_track_id: 'UA-44966783-2'            # Format: UA-xxxxxx-xx
+ga_domain: ms2008.github.io
 
 
 
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
-sidebar-about-description: "For the next quantum leap<br>离开世界之前，一切都是过程"
-sidebar-avatar: /img/avatar-hui.png      # use absolute URL, seeing it's used in both `/` and `/about/`
+sidebar-about-description: "写写代码，做做架构，<br>离开世界之前，一切都是过程"
+sidebar-avatar: /img/avatar-ms2008.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
 
@@ -87,12 +85,25 @@ service-worker: true
 
 
 
-
-
 # Friends
 friends: [
-    # {
-    #     title: "Su",
-    #     href: "http://su.gallery/"
-    # }
+    {
+        title: "poslua",
+        href: "http://ms2008.github.io"
+    },{
+        title: "OpenResty",
+        href: "https://openresty.org/en/"
+    },{
+        title: "Lor",
+        href: "http://lor.sumory.com/"
+    },{
+        title: "LuaJIT",
+        href: "http://luajit.org/"
+    },{
+        title: "Python",
+        href: "https://www.python.org/"
+    },{
+        title: "Golang",
+        href: "https://golang.org/"
+    }
 ]
