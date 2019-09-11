@@ -134,3 +134,69 @@ type poolLocalInternal struct {
  1. Get时， 先从local里尝试取出缓存对象（包括所有的P）。如果失败，就尝试从victim里取。
  2. victim里也取对象失败，就调用New方法。
  3. Put时，只放local里。
+
+新的数据结构下，cleanup方法策略也有所变化，改为每次只把victim里的对象回收掉。然后victim再指向当前的local。
+```go
+var (
+  // 所有sync.Pool	对象
+  allPools []*Pool
+  // 待回收的所有sync.Pool对象
+  oldPools []*Pool
+)
+func poolCleanup() {
+	for _, p := range oldPools {
+	  // 每次只回收victim
+	  p.victim = nil
+	  p.victimSize = 0
+	}
+
+	for _, p := range allPools {
+	  // victim指向当前的local
+	  p.victim = p.local
+	  p.victimSize = p.localSize
+	  p.local = nil
+	  p.localSize = 0
+	}
+	oldPools, allPools = allPools, nil
+}
+```
+
+显然这样好处就是这轮的缓存对象在GC时不会立马回收，而是存放起来，滞后一轮。这样下一轮能得到复用机会，提高了缓存对象的命中率。并且回收对象时，由对shared取O(n)的遍历操作，变成O(1)。
+
+从benchmark感受这个优化带来的性能提升：
+```go
+# 1.9.7
+BenchmarkPoolSTW-8     p96-ns/STW 285485 p50-ns/STW 190467
+# 1.13beta1
+BenchmarkPoolSTW-8     p96-ns/STW 7720  p50-ns/STW 4979
+```
+
+1.9.7版本的STW1阶段耗时TP96线是285485ns，而1.13beta1是7720ns。
+> Benchmark代码参考1.13beat1源码src/sync/pool_test.go.BenchmarkPoolSTW方法
+
+### 使用无锁队列替换shared区
+问题3是因为在shared的访问加了一把Mutex锁造成的。如果不消除这把锁，引入victim区也是徒劳。因为此时victim的访问也得加锁。
+
+旧实现中shared区是单纯的带锁后进先出队列，1.13beta版本改成了单生产者，多消费者的双端无锁环形队列。
+
+单生产者是指，每个P上运行的G，执行Put方法时，就往队列里存放缓存对象（别的P上运行的G不能往里放），并且只能放在队列头部。由于每个P任意时刻只有一个G被运行，所以存放缓存对象不需要加锁。
+
+多消费者分两种角色，一是在P上运行的G，执行Get方法时，从队列头部取出缓存对象。同上，取对象不用加锁；二是在其他P上运行的G，执行Get方法时，本地没有缓存对象，就到别的P上偷。此时偷窃者G只能从队列尾部取出对象，因为偷窃者可能有多个，所以尾部取数据用CAS来实现无锁。
+> 注意，每个P都持有自己的无锁队列，下图只画出了P0的。并且队列也可能有多个，下图只画出单队列的情况。
+
+![](/img/in-post/sync-pool-drawback2.png)
+>如何正确地实现无锁队列超出本文意图，不展开介绍。感兴趣可以自行找资料学习或看源码。
+
+每个P持有的循环队列初始化多大呢？增长和收缩策略呢？下面用一张图做宏观介绍：
+![](/img/in-post/sync-pool-drawback3.png)
+
+陈述要点：
+* shared区该用双向链表，每个链表节点指向一个无锁环形队列。
+* 链表节点必须在头部插入。
+* 当前P上的G取缓存对象时，只从头部链表节点指向的无锁队列里取。取不到，沿着prev指针到下一个无锁队列上重复操作，也没有的话，就到别的P上偷。
+* 盗窃者G在偷缓存对象时，只从尾部链表节点指向无锁队列里取。取不到，沿着next指针到一个无锁队列上重复操作，也没有的话，就到别的P上继续偷，直到都偷不着，就调用New方法。
+* 链表首次插入节点时，指向无锁队列初始化大小为8，增长策略为在头部插入新节点，指向的无锁队列大小为旧头部节点指向无锁队列大小的两倍，始终保持2的n次方大小。
+* 假如在链表长度为3的情况下。尾部节点指向的无锁队列里缓存对象被偷光了，那么尾部节点会沿着next指针前移，把旧的无锁队列内存释放掉。此时链表长度变为2，这是链表的收缩策略。最小时剩下一个节点，不会收缩成空链表。
+* 无锁队列的自身最大的大小是2**30，达到上限时，再执行Put操作就放不进去，也不报错。
+
+总体就是这样，让我们期待1.13的beta版本吧。
